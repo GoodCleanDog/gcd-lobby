@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lobby Welcome Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fugaz+One&family=Big+Shoulders+Display:wght@700;900&family=Courier+Prime:wght@700&display=swap">
+<style>
+/* Layout: fixed 1920×1080 TV stage scaled to fit the screen — script welcome, red ribbon, diner menu card of names, checkerboard footer */
+:root {
+  --cream: #E2DBC8;
+  --red: #E93F2D;
+  --ink: #2B1E18;
+  --paper: #EFE9DA;
+  --mustard: #D9A43B;
+  --welcome: "Hanley Pro", "Fugaz One", "Arial Black", sans-serif;
+  --menu: "Big Shoulders Display", "Oswald", "Arial Narrow", sans-serif;
+  --mono: "Courier Prime", "Courier New", monospace;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--cream); color: var(--ink); overflow: hidden; display: grid; place-items: center; }
+
+.stage { width: 1920px; height: 1080px; flex: none; position: relative; transform-origin: center center;
+  background: var(--cream); display: grid; grid-template-rows: auto auto 1fr 64px; justify-items: center; }
+
+.welcome { font-family: var(--welcome); font-style: italic; font-weight: 400; color: var(--red);
+  font-size: 128px; line-height: 1; margin: 56px 0 0; letter-spacing: -0.01em; text-align: center;
+  text-shadow: 5px 5px 0 rgba(43, 30, 24, .14); }
+
+.ribbon { margin-top: 26px; position: relative; background: var(--red); color: var(--cream);
+  font-family: var(--menu); font-weight: 900; font-size: 46px; letter-spacing: .14em; text-transform: uppercase;
+  padding: 10px 64px 12px; }
+.ribbon::before, .ribbon::after { content: ""; position: absolute; top: 12px; width: 48px; height: 100%; background: #B92E20; z-index: -1; }
+.ribbon::before { left: -34px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 28% 50%); }
+.ribbon::after { right: -34px; clip-path: polygon(0 0, 100% 0, 72% 50%, 100% 100%, 0 100%); }
+.ribbon span { color: var(--mustard); }
+
+.card { margin: 34px 0 36px; width: 1600px; background: var(--paper); border: 6px solid var(--ink);
+  outline: 3px solid var(--ink); outline-offset: -18px; padding: 44px 72px 40px; position: relative;
+  display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); gap: 18px; min-height: 0; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--mono); font-weight: 700; font-size: 24px; letter-spacing: .08em; text-transform: uppercase;
+  border-bottom: 3px double var(--ink); padding-bottom: 12px; }
+.card-head .count { color: var(--red); }
+
+.names { list-style: none; margin: 0; padding: 0; column-gap: 80px; column-fill: balance; min-height: 0; overflow: hidden; }
+.names li { break-inside: avoid; display: flex; align-items: baseline; gap: 14px;
+  font-family: var(--menu); font-weight: 900; text-transform: uppercase; letter-spacing: .03em; line-height: 1.22; }
+.names li { overflow: hidden; }
+.names li .nm { white-space: nowrap; flex: none; }
+.names li .star { flex: none; }
+.names li .dots { flex: 1 1 12px; border-bottom: 4px dotted rgba(43, 30, 24, .45); transform: translateY(-.22em); min-width: 30px; }
+.names li .star { color: var(--red); font-size: .7em; }
+
+.card-foot { display: flex; align-items: center; justify-content: center; gap: 36px; min-width: 0; border-top: 3px double var(--ink); padding-top: 16px; }
+.services { list-style: none; margin: 0; padding: 0; display: flex; align-items: baseline;
+  font-family: var(--menu); font-weight: 700; font-size: 25px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.services li { white-space: nowrap; }
+.services li + li::before { content: "★"; color: var(--red); font-size: .6em; margin: 0 .55em; vertical-align: .25em; }
+
+.empty { display: grid; place-items: center; text-align: center; font-family: var(--menu); font-weight: 900;
+  font-size: 64px; text-transform: uppercase; letter-spacing: .04em; line-height: 1.1; }
+.empty small { display: block; font-family: var(--mono); font-size: 26px; letter-spacing: .08em; margin-top: 14px; opacity: .7; }
+
+.checks { width: 100%; height: 64px; background: conic-gradient(var(--ink) 25%, var(--paper) 0 50%, var(--ink) 0 75%, var(--paper) 0) 0 0 / 64px 64px; }
+
+.status { position: absolute; right: 24px; bottom: 80px; font-family: var(--mono); font-size: 16px; color: var(--ink); opacity: .5; }
+</style>
+</head><body>
+
+
+<div class="stage" id="stage">
+  <h1 class="welcome">Welcome to Good Clean Dog!</h1>
+  <div class="ribbon">Today's <span>★</span> Special Guests</div>
+  <section class="card">
+    <div class="card-head"><span id="date"></span></div>
+    <ul class="names" id="names"></ul>
+    <div class="card-foot">
+      <ul class="services">
+        <li>Bathing</li><li>Blow Dry</li><li>Haircut</li><li>Fresh Look</li><li>De-Shed</li><li>Nail Trim</li><li>100% Zoomies Guaranteed</li>
+      </ul>
+    </div>
+  </section>
+  <div class="checks" aria-hidden="true"></div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+(function () {
+  const API = "https://ippazechiywlcyfrajpb.supabase.co/functions/v1/todays-pets", TZ = "America/Chicago";
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage"), list = $("names");
+  let names = null;
+
+  function fitStage() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = `scale(${s})`;
+    stage.style.margin = `${(1080 * s - 1080) / 2}px ${(1920 * s - 1920) / 2}px`;
+  }
+  window.addEventListener("resize", fitStage); fitStage();
+
+  function today() { return new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "long", month: "long", day: "numeric" }).format(new Date()); }
+  $("date").textContent = today();
+
+  function fitNames() {
+    const n = list.children.length;
+    if (!n) return;
+    const cols = n <= 8 ? 2 : n <= 21 ? 3 : n <= 40 ? 4 : 5;
+    list.style.columnCount = cols;
+    let size = cols <= 2 ? 84 : cols === 3 ? 64 : cols === 4 ? 52 : 44;
+    list.style.fontSize = size + "px";
+    const tooWide = () => [...list.children].some((li) => li.scrollWidth > li.clientWidth + 1);
+    while (size > 22 && (list.scrollHeight > list.clientHeight + 1 || list.scrollWidth > list.clientWidth + 1 || tooWide())) {
+      size -= 2; list.style.fontSize = size + "px";
+    }
+  }
+
+  function render() {
+    list.replaceChildren();
+    const card = list.parentElement;
+    card.querySelector(".empty")?.remove();
+    list.hidden = false;
+    if (!names || !names.length) {
+      list.hidden = true;
+      const e = document.createElement("div"); e.className = "empty";
+      e.textContent = names ? "The tubs are warming up" : "Pull up a stool";
+      const sm = document.createElement("small"); sm.textContent = names ? "Today's guests will be listed here" : "Today's guest list is on its way";
+      e.append(sm); list.after(e);
+      return;
+    }
+    names.forEach((nm) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span"); name.className = "nm"; name.textContent = nm;
+      const dots = document.createElement("span"); dots.className = "dots";
+      const star = document.createElement("span"); star.className = "star"; star.textContent = "★";
+      li.append(name, dots, star); list.append(li);
+    });
+    fitNames();
+  }
+
+  async function load() {
+    try {
+      const r = await fetch(API, { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      names = (await r.json()).pets || [];
+      $("status").textContent = "";
+    } catch (e) {
+      $("status").textContent = "Couldn't refresh the guest list. Will try again.";
+    }
+    render();
+  }
+
+  render();
+  load();
+  setInterval(() => { $("date").textContent = today(); load(); }, 5 * 60 * 1000);
+})();
+</script>
+
+</body></html>
